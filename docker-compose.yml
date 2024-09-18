@@ -1,0 +1,49 @@
+volumes:
+  geoserver-data:
+    
+networks:
+  network-system:
+    driver: bridge
+   
+services:
+  geoserver:
+    container_name: geoserver
+    image: docker.osgeo.org/geoserver:2.24.1
+    restart: unless-stopped
+    ports:
+      - "80:8080"
+    environment:
+      - INSTALL_EXTENSIONS=true
+      - STABLE_EXTENSIONS=wps,csw
+      - EXTRA_JAVA_OPTS=-Xms1G -Xmx2G
+      - POSTGRES_JNDI_ENABLED=true
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=data
+      - POSTGRES_USERNAME=admin
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_JNDI_RESOURCE_NAME=jdbc/postgres
+    volumes:
+      - geoserver-data:/opt/geoserver_data/:Z
+      - ./additional_libs:/opt/additional_libs:Z
+    healthcheck:
+      test: curl --fail "http://localhost:8080/geoserver/web/wicket/resource/org.geoserver.web.GeoServerBasePage/img/logo.png" || exit 1
+      interval: 10m
+      retries: 3
+      timeout: 20s
+    networks:
+      - network-system
+  
+  martin:
+    container_name: martin
+    image: urbica/martin
+    restart: unless-stopped
+    environment:
+      - DATABASE_URL=postgres://admin:password@postgres/data
+      - MARTIN_DB_POOL_SIZE=10
+      - MARTIN_PORT=3000
+      - WATCH_MODE=true
+    ports:
+      - 3000:3000
+    networks:
+      - network-system
